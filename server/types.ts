@@ -9,6 +9,20 @@ export interface TutorialContent {
   steps: TutorialStep[];
 }
 
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+}
+
+export interface ProgressDetails {
+  currentAction: string;
+  subProgress: number;
+  currentStep?: number;
+  totalSteps?: number;
+  phaseStartedAt: string;
+  logs: LogEntry[];
+}
+
 export interface GenerationJob {
   id: string;
   status: 'pending' | 'generating_content' | 'generating_audio' | 'rendering' | 'completed' | 'error';
@@ -21,6 +35,9 @@ export interface GenerationJob {
   videoPath?: string;
   error?: string;
   createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  progress?: ProgressDetails;
 }
 
 export interface GenerateRequest {

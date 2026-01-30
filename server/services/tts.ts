@@ -2,6 +2,8 @@ import { ttsSave } from 'edge-tts';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import type { ProgressTracker } from './progress.js';
+import { withTimeout, TIMEOUTS } from '../utils/timeout.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,17 +35,37 @@ export async function generateAudio(
 export async function generateAllAudio(
   explanations: string[],
   jobId: string,
-  voiceSpeed: number = 1.0
+  voiceSpeed: number = 1.0,
+  tracker?: ProgressTracker
 ): Promise<string[]> {
   await ensureAudioDir();
 
   const audioPaths: string[] = [];
+  const totalSteps = explanations.length;
 
   for (let i = 0; i < explanations.length; i++) {
+    const stepNum = i + 1;
+    const percent = Math.round((i / totalSteps) * 100);
+
+    tracker?.updateProgress(
+      percent,
+      `Generating audio for step ${stepNum}/${totalSteps}`,
+      stepNum
+    );
+
     const outputPath = path.join(AUDIO_DIR, `${jobId}_step_${i}.mp3`);
-    await generateAudio(explanations[i], outputPath, voiceSpeed);
+
+    const audioPromise = generateAudio(explanations[i], outputPath, voiceSpeed);
+    await withTimeout(
+      audioPromise,
+      TIMEOUTS.AUDIO_PER_STEP,
+      `Audio generation for step ${stepNum}`
+    );
+
     audioPaths.push(outputPath);
   }
+
+  tracker?.updateProgress(100, 'Audio generation complete', totalSteps);
 
   return audioPaths;
 }

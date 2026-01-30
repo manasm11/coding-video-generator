@@ -4,11 +4,14 @@ import type { GenerationJob, GenerateRequest } from '../types.js';
 import { generateTutorialContent } from '../services/claude.js';
 import { generateAllAudio, cleanupAudio } from '../services/tts.js';
 import { renderVideo, deleteVideo } from '../services/remotion.js';
+import { ProgressTracker } from '../services/progress.js';
+import { sseManager } from '../services/sse-manager.js';
 
 const router = Router();
 
 // In-memory job storage (use a database in production)
-const jobs = new Map<string, GenerationJob>();
+// Export for progress tracker access
+export const jobs = new Map<string, GenerationJob>();
 
 // Preview content without generating video
 router.post('/preview', async (req, res) => {
@@ -56,6 +59,7 @@ router.post('/generate', async (req, res) => {
       if (failedJob) {
         failedJob.status = 'error';
         failedJob.error = error.message;
+        failedJob.completedAt = new Date().toISOString();
       }
     });
 
@@ -71,46 +75,72 @@ async function processJob(jobId: string): Promise<void> {
   const job = jobs.get(jobId);
   if (!job) return;
 
+  // Set start time
+  job.startedAt = new Date().toISOString();
+
+  // Create progress tracker
+  const tracker = new ProgressTracker(job);
+
   try {
     // Step 1: Generate content
-    job.status = 'generating_content';
+    tracker.startPhase('generating_content');
+    sseManager.broadcast(jobId, 'status', 'generating_content');
     console.log(`[${jobId}] Generating content...`);
 
     const content = await generateTutorialContent(
       job.prompt,
       job.language || 'javascript',
-      job.style || 'beginner'
+      job.style || 'beginner',
+      tracker,
+      jobId
     );
     job.content = content;
+    tracker.completePhase();
 
     // Step 2: Generate audio
-    job.status = 'generating_audio';
+    tracker.startPhase('generating_audio', content.steps.length);
+    sseManager.broadcast(jobId, 'status', 'generating_audio');
     console.log(`[${jobId}] Generating audio...`);
 
     const explanations = content.steps.map((step) => step.explanation);
-    const audioFiles = await generateAllAudio(explanations, jobId, job.voiceSpeed);
+    const audioFiles = await generateAllAudio(
+      explanations,
+      jobId,
+      job.voiceSpeed,
+      tracker
+    );
     job.audioFiles = audioFiles;
+    tracker.completePhase();
 
     // Step 3: Render video
-    job.status = 'rendering';
+    tracker.startPhase('rendering');
+    sseManager.broadcast(jobId, 'status', 'rendering');
     console.log(`[${jobId}] Rendering video...`);
 
     const videoPath = await renderVideo({
       jobId,
       content,
       audioFiles,
+      tracker,
     });
 
     job.videoPath = videoPath;
     job.status = 'completed';
+    job.completedAt = new Date().toISOString();
+    tracker.completePhase();
     console.log(`[${jobId}] Completed!`);
 
     // Cleanup audio files after successful render
     await cleanupAudio(jobId);
+
+    // Signal job completion to SSE clients
+    sseManager.completeJob(jobId);
   } catch (error) {
     console.error(`[${jobId}] Error:`, error);
-    job.status = 'error';
-    job.error = error instanceof Error ? error.message : 'Unknown error';
+    tracker.setError(error instanceof Error ? error.message : 'Unknown error');
+    // Broadcast error status and complete job
+    sseManager.broadcast(jobId, 'status', 'error');
+    sseManager.completeJob(jobId);
   }
 }
 
@@ -156,6 +186,32 @@ router.get('/videos/:jobId', async (req, res) => {
   }
 
   res.sendFile(job.videoPath);
+});
+
+// SSE endpoint for real-time job output streaming
+router.get('/jobs/:jobId/stream', (req, res) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) {
+    return res.status(404).json({ error: 'Job not found' });
+  }
+
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+  // Prevent response timeout
+  req.socket.setTimeout(0);
+
+  // Get Last-Event-ID for reconnection support
+  const lastEventId = req.headers['last-event-id'] as string | undefined;
+
+  // Add client to SSE manager
+  sseManager.addClient(req.params.jobId, res, lastEventId);
+
+  // Send initial status
+  sseManager.broadcast(req.params.jobId, 'status', job.status);
 });
 
 export default router;

@@ -1,10 +1,15 @@
 import { spawn } from 'child_process';
 import type { TutorialContent } from '../types.js';
+import type { ProgressTracker } from './progress.js';
+import { withTimeout, TIMEOUTS } from '../utils/timeout.js';
+import { sseManager } from './sse-manager.js';
 
 export async function generateTutorialContent(
   prompt: string,
   language: string = 'javascript',
-  style: 'beginner' | 'intermediate' | 'advanced' = 'beginner'
+  style: 'beginner' | 'intermediate' | 'advanced' = 'beginner',
+  tracker?: ProgressTracker,
+  jobId?: string
 ): Promise<TutorialContent> {
   const styleDescriptions = {
     beginner: 'very simple, with detailed explanations of every concept',
@@ -40,20 +45,37 @@ Create a coding tutorial about: ${prompt}
 
 Respond with ONLY valid JSON, no markdown code blocks or additional text.`;
 
-  return new Promise((resolve, reject) => {
+  tracker?.updateProgress(10, 'Preparing prompt for AI...');
+
+  const generatePromise = new Promise<TutorialContent>((resolve, reject) => {
     const claude = spawn('claude', ['-p', fullPrompt, '--output-format', 'json'], {
       shell: true,
     });
 
     let stdout = '';
     let stderr = '';
+    let hasReceivedData = false;
+
+    tracker?.updateProgress(20, 'AI is generating content...');
 
     claude.stdout.on('data', (data) => {
       stdout += data;
+      // Broadcast to SSE clients
+      if (jobId) {
+        sseManager.broadcast(jobId, 'stdout', data.toString());
+      }
+      if (!hasReceivedData) {
+        hasReceivedData = true;
+        tracker?.updateProgress(50, 'Receiving AI response...');
+      }
     });
 
     claude.stderr.on('data', (data) => {
       stderr += data;
+      // Broadcast to SSE clients
+      if (jobId) {
+        sseManager.broadcast(jobId, 'stderr', data.toString());
+      }
     });
 
     claude.on('close', (code) => {
@@ -62,6 +84,8 @@ Respond with ONLY valid JSON, no markdown code blocks or additional text.`;
         reject(new Error(`Claude CLI failed with code ${code}: ${stderr}`));
         return;
       }
+
+      tracker?.updateProgress(80, 'Parsing tutorial content...');
 
       try {
         // Parse the JSON output from Claude CLI
@@ -105,6 +129,7 @@ Respond with ONLY valid JSON, no markdown code blocks or additional text.`;
           }
         }
 
+        tracker?.updateProgress(100, 'Content generation complete');
         resolve(content);
       } catch (error) {
         console.error('Failed to parse tutorial content:', error);
@@ -117,4 +142,10 @@ Respond with ONLY valid JSON, no markdown code blocks or additional text.`;
       reject(new Error(`Failed to spawn Claude CLI: ${err.message}`));
     });
   });
+
+  return withTimeout(
+    generatePromise,
+    TIMEOUTS.CONTENT_GENERATION,
+    'Content generation'
+  );
 }

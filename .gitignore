@@ -28,3 +28,13 @@ npm-debug.log*
 
 # Remotion
 .remotion/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+server_python/output/

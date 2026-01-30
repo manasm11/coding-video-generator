@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "server": "tsx server/index.ts",
+    "server:python": "uvicorn server_python.main:app --reload --port 8001",
     "remotion:preview": "remotion preview server/remotion/index.ts",
     "remotion:render": "remotion render server/remotion/index.ts"
   },

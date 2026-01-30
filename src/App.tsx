@@ -72,7 +72,7 @@ const App: React.FC = () => {
       if (hasChanges) {
         setJobs(updatedJobs);
       }
-    }, 3000);
+    }, 1500);
 
     return () => clearInterval(interval);
   }, [jobs, messageApi]);
