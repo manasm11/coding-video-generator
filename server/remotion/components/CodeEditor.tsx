@@ -68,22 +68,22 @@ const calculateFontSize = (code: string): number => {
   const maxLineLength = Math.max(...lines.map(line => line.length));
 
   // Available dimensions (approximate, accounting for padding and line numbers)
-  const availableWidth = 600; // pixels for code content
-  const availableHeight = 450; // pixels for code area
+  const availableWidth = 700; // pixels for code content
+  const availableHeight = 500; // pixels for code area
 
-  // Calculate font size based on width (assuming ~0.6 char width ratio for monospace)
-  const charWidthRatio = 0.6;
+  // Calculate font size based on width (assuming ~0.55 char width ratio for monospace)
+  const charWidthRatio = 0.55;
   const fontSizeForWidth = Math.floor(availableWidth / (maxLineLength * charWidthRatio));
 
-  // Calculate font size based on height (line height is 1.6)
-  const lineHeightRatio = 1.6;
+  // Calculate font size based on height (line height is 1.5)
+  const lineHeightRatio = 1.5;
   const fontSizeForHeight = Math.floor(availableHeight / (lineCount * lineHeightRatio));
 
   // Use the smaller of the two, with min/max bounds
   const calculatedSize = Math.min(fontSizeForWidth, fontSizeForHeight);
 
-  // Clamp between 12px and 20px
-  return Math.max(12, Math.min(20, calculatedSize));
+  // Clamp between 16px and 26px for better readability
+  return Math.max(16, Math.min(26, calculatedSize));
 };
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
