@@ -99,24 +99,31 @@ async def generate_all_audio(
 
 async def get_audio_duration(audio_path: str) -> float:
     """
-    Estimate audio duration based on file size.
-
-    For more accurate duration, you would need ffprobe.
+    Get actual audio duration using mutagen.
 
     Args:
         audio_path: Path to the audio file
 
     Returns:
-        Estimated duration in seconds
+        Duration in seconds
     """
     try:
-        path = Path(audio_path)
-        stats = path.stat()
-        # Rough estimate: MP3 at 128kbps = 16KB per second
-        estimated_duration = stats.st_size / (16 * 1024)
-        return max(5.0, estimated_duration)
-    except Exception:
-        return 10.0  # Default to 10 seconds
+        from mutagen.mp3 import MP3
+        audio = MP3(audio_path)
+        duration = audio.info.length
+        # Add a small buffer (0.5 seconds) to ensure audio completes
+        return duration + 0.5
+    except Exception as e:
+        print(f"Warning: Could not read audio duration for {audio_path}: {e}")
+        # Fallback to file size estimate
+        try:
+            path = Path(audio_path)
+            stats = path.stat()
+            # Rough estimate: MP3 at 128kbps = 16KB per second
+            estimated_duration = stats.st_size / (16 * 1024)
+            return max(5.0, estimated_duration)
+        except Exception:
+            return 10.0  # Default to 10 seconds
 
 
 async def cleanup_audio(job_id: str) -> None:
