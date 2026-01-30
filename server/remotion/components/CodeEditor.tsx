@@ -61,12 +61,40 @@ const tokenize = (code: string): string[] => {
   return tokens;
 };
 
+// Calculate optimal font size based on code content
+const calculateFontSize = (code: string): number => {
+  const lines = code.split('\n');
+  const lineCount = lines.length;
+  const maxLineLength = Math.max(...lines.map(line => line.length));
+
+  // Available dimensions (approximate, accounting for padding and line numbers)
+  const availableWidth = 600; // pixels for code content
+  const availableHeight = 450; // pixels for code area
+
+  // Calculate font size based on width (assuming ~0.6 char width ratio for monospace)
+  const charWidthRatio = 0.6;
+  const fontSizeForWidth = Math.floor(availableWidth / (maxLineLength * charWidthRatio));
+
+  // Calculate font size based on height (line height is 1.6)
+  const lineHeightRatio = 1.6;
+  const fontSizeForHeight = Math.floor(availableHeight / (lineCount * lineHeightRatio));
+
+  // Use the smaller of the two, with min/max bounds
+  const calculatedSize = Math.min(fontSizeForWidth, fontSizeForHeight);
+
+  // Clamp between 12px and 20px
+  return Math.max(12, Math.min(20, calculatedSize));
+};
+
 export const CodeEditor: React.FC<CodeEditorProps> = ({
   code,
   language,
   typingDuration,
 }) => {
   const frame = useCurrentFrame();
+
+  // Calculate optimal font size for this code block
+  const fontSize = calculateFontSize(code);
 
   // Calculate how many characters to show
   const totalChars = code.length;
@@ -117,8 +145,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         style={{
           flex: 1,
           padding: 20,
-          overflow: 'auto',
-          fontSize: 20,
+          overflow: 'hidden',
+          fontSize,
           lineHeight: 1.6,
         }}
       >
@@ -127,14 +155,14 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           const isLastLine = lineIndex === lines.length - 1;
 
           return (
-            <div key={lineIndex} style={{ display: 'flex', minHeight: 32 }}>
+            <div key={lineIndex} style={{ display: 'flex', minHeight: fontSize * 1.6 }}>
               {/* Line number */}
               <span
                 style={{
                   color: '#858585',
-                  width: 50,
+                  width: fontSize * 2.5,
                   textAlign: 'right',
-                  paddingRight: 20,
+                  paddingRight: fontSize,
                   userSelect: 'none',
                   flexShrink: 0,
                 }}
@@ -159,7 +187,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                     style={{
                       display: 'inline-block',
                       width: 2,
-                      height: 24,
+                      height: fontSize * 1.2,
                       backgroundColor: '#aeafad',
                       marginLeft: 2,
                       verticalAlign: 'text-bottom',
