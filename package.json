@@ -2,23 +2,14 @@
   "name": "coding-video-generator",
   "version": "1.0.0",
   "description": "Generate coding tutorial videos from prompts using Claude, Edge-TTS, and Remotion",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "server": "uvicorn server_python.main:app --reload --port 8001",
     "remotion:preview": "remotion preview server/remotion/index.ts",
     "remotion:render": "remotion render server/remotion/index.ts"
   },
   "dependencies": {
-    "@ant-design/icons": "^5.2.6",
     "@remotion/bundler": "^4.0.0",
     "@remotion/cli": "^4.0.0",
     "@remotion/renderer": "^4.0.0",
-    "antd": "^5.12.0",
-    "axios": "^1.6.0",
-    "prism-react-renderer": "^2.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "remotion": "^4.0.0"
@@ -27,8 +18,6 @@
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "@vitejs/plugin-react": "^4.2.0",
-    "typescript": "^5.3.0",
-    "vite": "^5.0.0"
+    "typescript": "^5.3.0"
   }
 }

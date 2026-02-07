@@ -1,0 +1,51 @@
+package components
+
+import (
+	"fmt"
+	"coding-video-generator/internal/models"
+)
+
+func overallProgress(j *models.GenerationJob) float64 {
+	if j.Progress == nil {
+		return 0
+	}
+	sub := j.Progress.SubProgress
+	switch j.Status {
+	case models.StatusGeneratingContent:
+		return sub * 0.25 // 0-25%
+	case models.StatusGeneratingAudio:
+		return 25 + (sub * 0.35) // 25-60%
+	case models.StatusRendering:
+		return 60 + (sub * 0.40) // 60-100%
+	case models.StatusCompleted:
+		return 100
+	default:
+		return 0
+	}
+}
+
+func progressAction(j *models.GenerationJob) string {
+	if j.Progress != nil {
+		return j.Progress.CurrentAction
+	}
+	return j.Status.Label()
+}
+
+func stepInfo(j *models.GenerationJob) string {
+	if j.Progress != nil && j.Progress.CurrentStep != nil && j.Progress.TotalSteps != nil {
+		return fmt.Sprintf("Step %d of %d", *j.Progress.CurrentStep, *j.Progress.TotalSteps)
+	}
+	return ""
+}
+
+templ ProgressBar(j *models.GenerationJob) {
+	<div class="progress-section">
+		<div class="progress-info">
+			<span>{ progressAction(j) }</span>
+			if info := stepInfo(j); info != "" {
+				<small class="secondary">{ info }</small>
+			}
+		</div>
+		<progress value={ fmt.Sprintf("%.0f", overallProgress(j)) } max="100"></progress>
+	</div>
+}

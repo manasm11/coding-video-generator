@@ -1,105 +1,108 @@
 # Coding Video Tutorial Generator
 
-A full-stack web application that automatically generates professional coding tutorial videos from text prompts. It uses AI (Claude) to generate structured tutorial content, text-to-speech for narration, and Remotion to render polished video output.
+A web application that generates professional coding tutorial videos from text prompts. It uses AI (Claude) to generate structured tutorial content, edge-tts for narration, and Remotion to render polished video output.
 
 ## Features
 
-- **AI-Powered Content Generation** - Enter a simple prompt and Claude AI generates structured tutorial content with code snippets and explanations
-- **Multi-Language Support** - Supports 10+ programming languages including JavaScript, Python, Java, C++, Go, Rust, TypeScript, and more
-- **Text-to-Speech Narration** - Natural-sounding narration using Edge-TTS with configurable speed
-- **Professional Video Output** - 1920x1080 videos with animated title cards, code typing animations, syntax highlighting, and smooth transitions
+- **AI-Powered Content Generation** - Enter a prompt and Claude AI generates structured tutorial content with code snippets and explanations
+- **Multi-Language Support** - 10 programming languages: JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP
+- **Text-to-Speech Narration** - Natural-sounding narration using Edge-TTS with configurable speed (0.5-1.5x)
+- **Professional Video Output** - 1920x1080 videos with animated title cards, code typing animations, syntax highlighting, and transitions
 - **Preview Before Rendering** - Review generated content before committing to video rendering
-- **Job Management** - Track progress of video generation with real-time status updates
+- **Real-Time Progress** - Live terminal output via SSE and polling-based progress updates
+- **Single Server** - Go backend serves HTML templates, API, and static files on one port
 
 ## Tech Stack
 
-**Frontend:**
-- React 18 with TypeScript
-- Vite 5
-- Ant Design 5
-
-**Backend:**
-- Python / FastAPI
-- Edge-TTS (text-to-speech)
-- Mutagen (audio duration detection)
-- Remotion 4 (video rendering, via Node.js subprocess)
-- Claude CLI (AI content generation)
+- **Backend:** Go (stdlib `net/http` router)
+- **Templates:** [templ](https://templ.guide/) (type-safe, compiled Go templates)
+- **Frontend:** [htmx](https://htmx.org/) + [Pico CSS](https://picocss.com/) (dark theme)
+- **Video:** [Remotion](https://www.remotion.dev/) 4 (Node.js subprocess)
+- **TTS:** edge-tts CLI
+- **AI:** Claude CLI
 
 ## Prerequisites
 
+- Go 1.22+
 - Node.js 18+
-- Python 3.10+
 - Claude CLI installed and configured
 - FFmpeg (required by Remotion)
+- edge-tts (`pip install edge-tts`)
+- templ CLI (`go install github.com/a-h/templ/cmd/templ@latest`)
 
 ## Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/coding-video-generator.git
-   cd coding-video-generator
-   ```
+```bash
+git clone https://github.com/yourusername/coding-video-generator.git
+cd coding-video-generator
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+# Install Node.js dependencies (Remotion)
+npm install
 
-3. Copy the environment example and configure:
-   ```bash
-   cp .env.example .env
-   ```
+# Install Go dependencies
+go mod download
+```
 
 ## Usage
 
-1. Start the backend server:
-   ```bash
-   npm run server
-   ```
+```bash
+# Development (generate templates + run server)
+make dev
 
-2. In a separate terminal, start the frontend:
-   ```bash
-   npm run dev
-   ```
+# Or build and run
+make build
+make run
+```
 
-3. Open http://localhost:3001 in your browser
+Open http://localhost:8001, enter a tutorial prompt, and click Generate.
 
-4. Enter a tutorial prompt (e.g., "Create a tutorial on JavaScript array methods"), select your options, and click Generate
+## Available Commands
 
-## Available Scripts
+```bash
+make dev       # Generate templates + run server
+make build     # Build binary to bin/server
+make run       # Build + run
+make generate  # Generate templ templates only
+make clean     # Clean build artifacts
 
-- `npm run dev` - Start frontend development server (port 3001)
-- `npm run server` - Start Python backend server (port 8001)
-- `npm run build` - Build for production
-- `npm run remotion:preview` - Preview Remotion video composition
+npm run remotion:preview  # Preview Remotion composition
+```
 
 ## Project Structure
 
 ```
 coding-video-generator/
-├── src/                     # Frontend (React + Vite)
-│   ├── App.tsx             # Main application component
-│   ├── api/                # API client
-│   └── components/         # React components
-├── server/                  # Remotion video composition (TypeScript)
-│   └── remotion/            # Video composition components
-├── server_python/           # Backend (FastAPI/Python)
-│   ├── main.py             # App entry point
-│   ├── routes/             # API endpoints
-│   ├── services/           # Claude, TTS, Remotion services
-│   └── models/             # Pydantic schemas
-├── public/                 # Static assets
-└── package.json
+├── cmd/server/main.go          # Entry point, routing, server startup
+├── internal/
+│   ├── config/                 # Timeouts, paths, settings
+│   ├── models/                 # Job, content, progress types
+│   ├── handler/                # HTTP handlers (pages, API, SSE, files)
+│   ├── service/                # Claude, TTS, Remotion, pipeline
+│   ├── sse/                    # SSE fan-out manager
+│   ├── job/                    # In-memory job store
+│   └── progress/               # Progress tracking
+├── templates/                  # templ templates
+│   ├── layout.templ            # Base HTML (Pico CSS, htmx)
+│   ├── pages/index.templ       # Main page
+│   └── components/             # Form, job card, terminal, etc.
+├── static/css/app.css          # Custom styles
+├── server/remotion/            # Remotion video composition
+├── package.json                # Remotion dependencies
+├── go.mod / go.sum
+└── Makefile
 ```
 
 ## API Endpoints
 
-- `POST /api/generate` - Start video generation
-- `POST /api/preview` - Generate content preview
-- `GET /api/jobs` - List all jobs
-- `GET /api/jobs/:jobId` - Get job status
-- `DELETE /api/jobs/:jobId` - Delete a job
-- `GET /api/videos/:jobId` - Download generated video
+- `POST /api/generate` - Start video generation (form data)
+- `POST /api/preview` - Generate content preview (form data)
+- `GET /api/jobs` - List all jobs (JSON)
+- `GET /api/jobs/{jobId}` - Get job status (JSON)
+- `GET /api/jobs/{jobId}/card` - Job card HTML partial (htmx polling)
+- `GET /api/jobs/{jobId}/stream` - SSE stream for terminal output
+- `DELETE /api/jobs/{jobId}` - Delete a job
+- `GET /api/videos/{jobId}` - Serve video file
+- `GET /api/audio/{jobId}/{step}` - Serve audio file (for Remotion)
 
 ## License
 

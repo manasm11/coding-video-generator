@@ -1,0 +1,225 @@
+/* Terminal styling */
+.terminal {
+    background: #1e1e1e;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 1rem 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.terminal-header {
+    background: #2d2d2d;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.terminal-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.terminal-dot.green {
+    background: #4caf50;
+}
+
+.terminal-dot.red {
+    background: #f44336;
+}
+
+.terminal-body {
+    padding: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.6;
+}
+
+.t-stdout {
+    color: #4caf50;
+}
+
+.t-stderr {
+    color: #f44336;
+}
+
+.t-status {
+    color: #2196f3;
+}
+
+.t-info {
+    color: #2196f3;
+}
+
+/* Job card styling */
+.job-card {
+    margin-bottom: 1rem;
+}
+
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.prompt-preview {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    font-size: 0.9rem;
+}
+
+.job-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.job-actions div {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.job-actions a[role="button"],
+.job-actions button {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+/* Status badges */
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.status-active {
+    background: #1565c0;
+    color: #e3f2fd;
+}
+
+.status-completed {
+    background: #2e7d32;
+    color: #e8f5e9;
+}
+
+.status-error {
+    background: #c62828;
+    color: #ffebee;
+}
+
+/* Progress */
+.progress-section {
+    margin: 0.5rem 0;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.3rem;
+    font-size: 0.85rem;
+}
+
+/* Preview */
+.preview details {
+    margin-bottom: 0.5rem;
+}
+
+.preview summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.step-number {
+    font-weight: 600;
+}
+
+.preview pre {
+    margin-top: 0.5rem;
+}
+
+.preview-error {
+    border-left: 3px solid #c62828;
+}
+
+/* Toast notifications */
+#toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+    max-width: 400px;
+}
+
+.toast {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    animation: toast-slide-in 0.3s ease-out;
+    font-size: 0.9rem;
+}
+
+.toast-success {
+    background: #2e7d32;
+    color: #e8f5e9;
+}
+
+.toast-error {
+    background: #c62828;
+    color: #ffebee;
+}
+
+.toast-info {
+    background: #1565c0;
+    color: #e3f2fd;
+}
+
+@keyframes toast-slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* htmx indicator */
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator {
+    display: inline;
+}
+
+/* Pico overrides */
+article > header {
+    margin-bottom: 0.5rem;
+}
+
+header h1 {
+    margin-bottom: 0.25rem;
+}
+
+.badge.outline {
+    background: transparent;
+    border: 1px solid currentColor;
+    color: #64b5f6;
+}

@@ -4,58 +4,73 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI-powered coding video tutorial generator. Users enter a text prompt, and the system generates a narrated coding tutorial video using Claude AI (content), Edge-TTS (narration), and Remotion (video rendering). The backend is Python/FastAPI (`server_python/`) and the frontend is React/Vite (`src/`).
+AI-powered coding video tutorial generator. Users enter a text prompt, and the system generates a narrated coding tutorial video using Claude AI (content), Edge-TTS (narration), and Remotion (video rendering). The backend is Go, serving templ templates with htmx for interactivity and Pico CSS for styling.
 
 ## Commands
 
 ### Development
 
 ```bash
-# Frontend dev server (port 3001, proxies /api to :8001)
-npm run dev
+# Generate templ templates + run server
+make dev
 
-# Python backend (port 8001)
-npm run server
-# or: uvicorn server_python.main:app --reload --port 8001
+# Build binary
+make build
+
+# Run built binary
+make run
+
+# Generate templ templates only
+make generate
 
 # Remotion video preview
 npm run remotion:preview
 ```
 
-### Build
+### Prerequisites
 
 ```bash
-npm run build          # tsc && vite build
-```
+# Install templ CLI
+go install github.com/a-h/templ/cmd/templ@latest
 
-### Python Dependencies
+# Install Node.js dependencies (for Remotion)
+npm install
 
-```bash
-pip install -r server_python/requirements.txt
+# edge-tts CLI must be available
+pip install edge-tts
 ```
 
 ## Architecture
 
 ### Video Generation Pipeline
 
-The core workflow is a 3-phase async pipeline triggered by `POST /api/generate`:
+The core workflow is a 3-phase pipeline triggered by `POST /api/generate` (htmx form submission):
 
 1. **Content Generation** — Spawns `claude -p "{prompt}" --output-format json` as a subprocess. Parses the JSON response into a structured tutorial (title, steps with code snippets and explanations).
-2. **Audio Generation** — Uses Edge-TTS to generate MP3 narration for each step's explanation text. Configurable voice speed (0.5-1.5x).
-3. **Video Rendering** — Bundles and renders a Remotion composition (`CodingTutorial`) into an MP4 (1920x1080 @ 30fps, H.264). Each step gets a code editor with typewriter animation synced to its audio.
+2. **Audio Generation** — Shells out to `edge-tts` CLI to generate MP3 narration for each step. Configurable voice speed (0.5-1.5x).
+3. **Video Rendering** — Bundles and renders a Remotion composition (`CodingTutorial`) into an MP4 (1920x1080 @ 30fps, H.264) via Node.js subprocess.
 
-Jobs are tracked in-memory (no database). Real-time progress is streamed to the frontend via SSE (`/api/jobs/{jobId}/stream`) with reconnection and event buffering support.
+Jobs are tracked in-memory with `sync.RWMutex`. Real-time progress via SSE streaming and htmx polling.
 
-### Backend
+### Go Backend
 
-`server_python/` (FastAPI) handles the API, job management, and the 3-phase pipeline. Uses `mutagen` for MP3 duration detection and serves audio files over HTTP for Remotion (since `file://` doesn't work in that context).
+Single Go server (`cmd/server/main.go`) using Go 1.22+ stdlib router. Key packages:
 
-### Frontend
+- `internal/config/` — Timeouts, paths, TTS voice settings
+- `internal/models/` — GenerationJob, TutorialContent, enums
+- `internal/job/` — Thread-safe in-memory job store
+- `internal/handler/` — HTTP handlers (pages, API, SSE, file serving)
+- `internal/service/` — Claude, TTS, Remotion subprocess wrappers + pipeline orchestration
+- `internal/sse/` — SSE fan-out manager with event buffering and subscriber channels
+- `internal/progress/` — Phase management and progress tracking
 
-React + Vite + Ant Design. Key pieces:
-- `src/hooks/useJobStream.ts` — EventSource-based SSE hook with auto-reconnect and history replay
-- `src/components/PromptForm.tsx` — Form with language/difficulty/speed selectors
-- `src/components/VideoList.tsx` — Job table with polling (1.5s) for status updates
+### Templates & Frontend
+
+- `templates/` — templ templates (type-safe, compiled Go templates)
+- `templates/layout.templ` — Base HTML with Pico CSS (dark theme) and htmx
+- `templates/components/` — Reusable components (form, job card, progress bar, terminal, preview, toast)
+- `static/css/app.css` — Terminal styling, toast animations, Pico CSS overrides
+- htmx handles all interactivity: form submissions, job polling, SSE terminal streaming, delete confirmation
 
 ### Remotion Video Composition
 
@@ -66,6 +81,14 @@ Located in `server/remotion/`. The `CodingTutorial` component renders:
 - 30-frame transitions between steps
 
 Font sizing is dynamic (16-26px range) to prevent code overflow.
+
+### htmx Interaction Patterns
+
+- **Generate:** `hx-post="/api/generate"` → returns job card HTML prepended to `#job-list`
+- **Preview:** `hx-post="/api/preview"` → returns preview HTML into `#preview-panel`
+- **Job polling:** Active job cards poll `hx-get="/api/jobs/{id}/card"` every 2s; stops when completed/error
+- **Terminal:** `hx-ext="sse" sse-connect="/api/jobs/{id}/stream"` for real-time CLI output
+- **Delete:** `hx-delete="/api/jobs/{id}"` with confirmation
 
 ### Job Lifecycle
 
@@ -83,7 +106,7 @@ pending → generating_content → generating_audio → rendering → completed
 
 ## Key Types
 
-- `server_python/models/schemas.py` — Python types for API requests/responses and job model
+- `internal/models/job.go` — Go types for jobs, tutorial content, progress
 - `server/types.ts` — TypeScript types used by the Remotion video composition
 
 The `GenerateRequest` includes: prompt, language (10 supported), difficulty level, and narration speed.

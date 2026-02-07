@@ -1,0 +1,34 @@
+package pages
+
+import (
+	"coding-video-generator/internal/models"
+	"coding-video-generator/templates"
+	"coding-video-generator/templates/components"
+)
+
+templ Index(jobs []*models.GenerationJob) {
+	@templates.Layout("Coding Video Generator") {
+		<header>
+			<h1>Coding Video Generator</h1>
+			<p class="secondary">Generate narrated coding tutorial videos from text prompts</p>
+		</header>
+
+		<div class="grid">
+			<div>
+				@components.PromptForm()
+			</div>
+			<div id="preview-panel"></div>
+		</div>
+
+		<section id="jobs-section">
+			<h2>Jobs</h2>
+			<div id="job-list">
+				for _, job := range jobs {
+					@components.JobCard(job)
+				}
+			</div>
+		</section>
+
+		<div id="toast-container"></div>
+	}
+}

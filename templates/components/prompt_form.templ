@@ -1,0 +1,83 @@
+package components
+
+import "coding-video-generator/internal/models"
+
+templ PromptForm() {
+	<article>
+		<header>
+			<h3>Create Tutorial</h3>
+		</header>
+		<form id="generate-form">
+			<label for="prompt">
+				Tutorial Prompt
+				<textarea
+					id="prompt"
+					name="prompt"
+					placeholder="e.g., Build a REST API with Express.js"
+					rows="3"
+					required
+				></textarea>
+			</label>
+
+			<div class="grid">
+				<label for="language">
+					Language
+					<select id="language" name="language">
+						for _, lang := range models.SupportedLanguages {
+							<option value={ lang }>{ lang }</option>
+						}
+					</select>
+				</label>
+
+				<label for="style">
+					Difficulty
+					<select id="style" name="style">
+						<option value="beginner">Beginner</option>
+						<option value="intermediate">Intermediate</option>
+						<option value="advanced">Advanced</option>
+					</select>
+				</label>
+			</div>
+
+			<label for="voiceSpeed">
+				Narration Speed: <span id="speed-display">1.0x</span>
+				<input
+					type="range"
+					id="voiceSpeed"
+					name="voiceSpeed"
+					min="0.5"
+					max="1.5"
+					step="0.1"
+					value="1.0"
+					oninput="document.getElementById('speed-display').textContent = this.value + 'x'"
+				/>
+			</label>
+
+			<div class="grid">
+				<button
+					type="button"
+					class="secondary"
+					hx-post="/api/preview"
+					hx-include="#generate-form"
+					hx-target="#preview-panel"
+					hx-swap="innerHTML"
+					hx-indicator="#preview-spinner"
+				>
+					<span id="preview-spinner" class="htmx-indicator">⏳ </span>
+					Preview Content
+				</button>
+				<button
+					type="submit"
+					hx-post="/api/generate"
+					hx-include="#generate-form"
+					hx-target="#job-list"
+					hx-swap="afterbegin"
+					hx-indicator="#generate-spinner"
+				>
+					<span id="generate-spinner" class="htmx-indicator">⏳ </span>
+					Generate Video
+				</button>
+			</div>
+		</form>
+	</article>
+}

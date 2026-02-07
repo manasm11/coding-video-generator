@@ -1,0 +1,14 @@
+package components
+
+import "coding-video-generator/internal/models"
+
+templ JobList(jobs []*models.GenerationJob) {
+	<div id="job-list">
+		for _, job := range jobs {
+			@JobCard(job)
+		}
+		if len(jobs) == 0 {
+			<p class="secondary">No jobs yet. Generate a tutorial to get started!</p>
+		}
+	</div>
+}

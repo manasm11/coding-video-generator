@@ -1,0 +1,19 @@
+package components
+
+import "fmt"
+
+templ Terminal(jobID string) {
+	<div
+		class="terminal"
+		hx-ext="sse"
+		sse-connect={ fmt.Sprintf("/api/jobs/%s/stream", jobID) }
+		sse-close="status"
+	>
+		<div class="terminal-header">
+			<span class="terminal-dot green"></span>
+			<span>Terminal Output</span>
+		</div>
+		<div class="terminal-body" sse-swap="terminal" hx-swap="beforeend scroll:bottom">
+		</div>
+	</div>
+}

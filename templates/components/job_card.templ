@@ -1,0 +1,100 @@
+package components
+
+import (
+	"fmt"
+	"coding-video-generator/internal/models"
+)
+
+func jobTitle(j *models.GenerationJob) string {
+	if j.Content != nil && j.Content.Title != "" {
+		return j.Content.Title
+	}
+	return "Generating..."
+}
+
+func statusClass(s models.JobStatus) string {
+	switch s {
+	case models.StatusCompleted:
+		return "status-completed"
+	case models.StatusError:
+		return "status-error"
+	default:
+		return "status-active"
+	}
+}
+
+func promptPreview(prompt string) string {
+	if len(prompt) > 120 {
+		return prompt[:120] + "..."
+	}
+	return prompt
+}
+
+templ JobCard(j *models.GenerationJob) {
+	if j.Status.IsActive() {
+		<article
+			id={ fmt.Sprintf("job-%s", j.ID) }
+			class="job-card"
+			hx-get={ fmt.Sprintf("/api/jobs/%s/card", j.ID) }
+			hx-trigger="every 2s"
+			hx-swap="outerHTML"
+		>
+			@jobCardInner(j)
+		</article>
+	} else {
+		<article id={ fmt.Sprintf("job-%s", j.ID) } class="job-card">
+			@jobCardInner(j)
+		</article>
+	}
+}
+
+templ jobCardInner(j *models.GenerationJob) {
+	<header>
+		<div class="job-header">
+			<strong>{ jobTitle(j) }</strong>
+			<span class={ "badge", statusClass(j.Status) }>{ j.Status.Label() }</span>
+		</div>
+	</header>
+
+	<p class="secondary prompt-preview">{ promptPreview(j.Prompt) }</p>
+
+	if j.Status.IsActive() {
+		@ProgressBar(j)
+	}
+
+	if j.Status == models.StatusGeneratingContent {
+		@Terminal(j.ID)
+	}
+
+	<footer class="job-actions">
+		<small class="secondary">{ j.CreatedAt }</small>
+		<div>
+			if j.Status == models.StatusCompleted {
+				<a
+					href={ templ.SafeURL(fmt.Sprintf("/api/videos/%s", j.ID)) }
+					role="button"
+					class="outline"
+					target="_blank"
+				>
+					▶ Play
+				</a>
+				<a
+					href={ templ.SafeURL(fmt.Sprintf("/api/videos/%s/download", j.ID)) }
+					role="button"
+					class="outline"
+				>
+					⬇ Download
+				</a>
+			}
+			<button
+				class="outline secondary"
+				hx-delete={ fmt.Sprintf("/api/jobs/%s", j.ID) }
+				hx-target={ fmt.Sprintf("#job-%s", j.ID) }
+				hx-swap="delete"
+				hx-confirm="Delete this job and its files?"
+			>
+				🗑 Delete
+			</button>
+		</div>
+	</footer>
+}

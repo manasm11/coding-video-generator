@@ -1,0 +1,12 @@
+package components
+
+templ Toast(message string, kind string) {
+	<div
+		id="toast-container"
+		hx-swap-oob="innerHTML"
+	>
+		<div class={ "toast", "toast-" + kind } role="alert">
+			{ message }
+		</div>
+	</div>
+}

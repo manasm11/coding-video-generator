@@ -4,11 +4,16 @@ node_modules/
 # Build outputs
 dist/
 build/
+bin/
 
 # Generated content
+output/
 server/output/
 *.mp4
 *.mp3
+
+# Go
+*_templ.go
 
 # Environment
 .env
@@ -28,13 +33,3 @@ npm-debug.log*
 
 # Remotion
 .remotion/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
-.eggs/
-server_python/output/

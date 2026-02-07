@@ -1,0 +1,26 @@
+package components
+
+import (
+	"fmt"
+	"coding-video-generator/internal/models"
+)
+
+templ Preview(content *models.TutorialContent) {
+	<article class="preview">
+		<header>
+			<h3>{ content.Title }</h3>
+			<small class="secondary">{ fmt.Sprintf("%d steps", len(content.Steps)) }</small>
+		</header>
+
+		for i, step := range content.Steps {
+			<details>
+				<summary>
+					<span class="step-number">{ fmt.Sprintf("Step %d", i+1) }</span>
+					<span class="badge outline">{ step.Language }</span>
+				</summary>
+				<p>{ step.Explanation }</p>
+				<pre><code>{ step.Code }</code></pre>
+			</details>
+		}
+	</article>
+}
