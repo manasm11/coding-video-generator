@@ -18,21 +18,17 @@ A full-stack web application that automatically generates professional coding tu
 - Vite 5
 - Ant Design 5
 
-**Backend (TypeScript):**
-- Express.js
-- Remotion 4 (video rendering)
+**Backend:**
+- Python / FastAPI
 - Edge-TTS (text-to-speech)
-- Claude CLI (AI content generation)
-
-**Backend (Python alternative):**
-- FastAPI
-- Edge-TTS
 - Mutagen (audio duration detection)
+- Remotion 4 (video rendering, via Node.js subprocess)
+- Claude CLI (AI content generation)
 
 ## Prerequisites
 
 - Node.js 18+
-- Python 3.10+ (for Python backend)
+- Python 3.10+
 - Claude CLI installed and configured
 - FFmpeg (required by Remotion)
 
@@ -58,9 +54,7 @@ A full-stack web application that automatically generates professional coding tu
 
 1. Start the backend server:
    ```bash
-   npm run server          # TypeScript backend
-   # or
-   npm run server:python   # Python backend
+   npm run server
    ```
 
 2. In a separate terminal, start the frontend:
@@ -75,8 +69,7 @@ A full-stack web application that automatically generates professional coding tu
 ## Available Scripts
 
 - `npm run dev` - Start frontend development server (port 3001)
-- `npm run server` - Start TypeScript backend server (port 8001)
-- `npm run server:python` - Start Python backend server (port 8001)
+- `npm run server` - Start Python backend server (port 8001)
 - `npm run build` - Build for production
 - `npm run remotion:preview` - Preview Remotion video composition
 
@@ -88,10 +81,8 @@ coding-video-generator/
 │   ├── App.tsx             # Main application component
 │   ├── api/                # API client
 │   └── components/         # React components
-├── server/                 # Backend (Express/TypeScript)
-│   ├── routes/             # API endpoints
-│   ├── services/           # Claude, TTS, Remotion services
-│   └── remotion/           # Video composition components
+├── server/                  # Remotion video composition (TypeScript)
+│   └── remotion/            # Video composition components
 ├── server_python/           # Backend (FastAPI/Python)
 │   ├── main.py             # App entry point
 │   ├── routes/             # API endpoints

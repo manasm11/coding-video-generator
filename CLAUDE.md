@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI-powered coding video tutorial generator. Users enter a text prompt, and the system generates a narrated coding tutorial video using Claude AI (content), Edge-TTS (narration), and Remotion (video rendering). There are two backend implementations (TypeScript/Express and Python/FastAPI) that share the same React frontend.
+AI-powered coding video tutorial generator. Users enter a text prompt, and the system generates a narrated coding tutorial video using Claude AI (content), Edge-TTS (narration), and Remotion (video rendering). The backend is Python/FastAPI (`server_python/`) and the frontend is React/Vite (`src/`).
 
 ## Commands
 
@@ -14,11 +14,8 @@ AI-powered coding video tutorial generator. Users enter a text prompt, and the s
 # Frontend dev server (port 3001, proxies /api to :8001)
 npm run dev
 
-# TypeScript backend (port 8001)
-npm run server
-
 # Python backend (port 8001)
-npm run server:python
+npm run server
 # or: uvicorn server_python.main:app --reload --port 8001
 
 # Remotion video preview
@@ -49,9 +46,9 @@ The core workflow is a 3-phase async pipeline triggered by `POST /api/generate`:
 
 Jobs are tracked in-memory (no database). Real-time progress is streamed to the frontend via SSE (`/api/jobs/{jobId}/stream`) with reconnection and event buffering support.
 
-### Dual Backends
+### Backend
 
-`server/` (TypeScript/Express) and `server_python/` (FastAPI) are functionally equivalent — same API endpoints, same job model, same pipeline. Key difference: Python uses `mutagen` for MP3 duration detection and serves audio files over HTTP for Remotion (since `file://` doesn't work in that context).
+`server_python/` (FastAPI) handles the API, job management, and the 3-phase pipeline. Uses `mutagen` for MP3 duration detection and serves audio files over HTTP for Remotion (since `file://` doesn't work in that context).
 
 ### Frontend
 
@@ -86,4 +83,7 @@ pending → generating_content → generating_audio → rendering → completed
 
 ## Key Types
 
-Shared types are in `server/types.ts` (TS) and `server_python/models/schemas.py` (Python). The `GenerateRequest` includes: prompt, language (10 supported), difficulty level, and narration speed.
+- `server_python/models/schemas.py` — Python types for API requests/responses and job model
+- `server/types.ts` — TypeScript types used by the Remotion video composition
+
+The `GenerateRequest` includes: prompt, language (10 supported), difficulty level, and narration speed.
