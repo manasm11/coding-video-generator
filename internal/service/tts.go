@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"coding-video-generator/internal/config"
 	"coding-video-generator/internal/progress"
+
+	"github.com/bytectlgo/edge-tts/pkg/edge_tts"
 )
 
 // voiceSpeedToRate converts a speed multiplier (e.g., 1.2) to edge-tts rate string (e.g., "+20%").
@@ -22,7 +23,7 @@ func voiceSpeedToRate(speed float64) string {
 	return "+0%"
 }
 
-// GenerateAudio generates a single MP3 from text using edge-tts CLI.
+// GenerateAudio generates a single MP3 from text using the edge-tts Go library.
 func GenerateAudio(ctx context.Context, text, outputPath string, voiceSpeed float64) error {
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
 		return fmt.Errorf("failed to create audio dir: %w", err)
@@ -30,16 +31,9 @@ func GenerateAudio(ctx context.Context, text, outputPath string, voiceSpeed floa
 
 	rate := voiceSpeedToRate(voiceSpeed)
 
-	cmd := exec.CommandContext(ctx, "edge-tts",
-		"--voice", config.TTSVoice,
-		"--rate", rate,
-		"--text", text,
-		"--write-media", outputPath,
-	)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("edge-tts failed: %w: %s", err, string(output))
+	comm := edge_tts.NewCommunicate(text, config.TTSVoice, edge_tts.WithRate(rate))
+	if err := comm.Save(ctx, outputPath, ""); err != nil {
+		return fmt.Errorf("edge-tts failed: %w", err)
 	}
 
 	return nil

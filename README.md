@@ -18,7 +18,7 @@ A web application that generates professional coding tutorial videos from text p
 - **Templates:** [templ](https://templ.guide/) (type-safe, compiled Go templates)
 - **Frontend:** [htmx](https://htmx.org/) + [Pico CSS](https://picocss.com/) (dark theme)
 - **Video:** [Remotion](https://www.remotion.dev/) 4 (Node.js subprocess)
-- **TTS:** edge-tts CLI
+- **TTS:** [bytectlgo/edge-tts](https://github.com/bytectlgo/edge-tts) Go library
 - **AI:** Claude CLI
 
 ## Prerequisites
@@ -27,7 +27,6 @@ A web application that generates professional coding tutorial videos from text p
 - Node.js 18+
 - Claude CLI installed and configured
 - FFmpeg (required by Remotion)
-- edge-tts (`pip install edge-tts`)
 - templ CLI (`go install github.com/a-h/templ/cmd/templ@latest`)
 
 ## Installation

@@ -35,9 +35,6 @@ go install github.com/a-h/templ/cmd/templ@latest
 
 # Install Node.js dependencies (for Remotion)
 npm install
-
-# edge-tts CLI must be available
-pip install edge-tts
 ```
 
 ## Architecture
@@ -47,7 +44,7 @@ pip install edge-tts
 The core workflow is a 3-phase pipeline triggered by `POST /api/generate` (htmx form submission):
 
 1. **Content Generation** — Spawns `claude -p "{prompt}" --output-format json` as a subprocess. Parses the JSON response into a structured tutorial (title, steps with code snippets and explanations).
-2. **Audio Generation** — Shells out to `edge-tts` CLI to generate MP3 narration for each step. Configurable voice speed (0.5-1.5x).
+2. **Audio Generation** — Uses the `bytectlgo/edge-tts` Go library to generate MP3 narration for each step. Configurable voice speed (0.5-1.5x).
 3. **Video Rendering** — Bundles and renders a Remotion composition (`CodingTutorial`) into an MP4 (1920x1080 @ 30fps, H.264) via Node.js subprocess.
 
 Jobs are tracked in-memory with `sync.RWMutex`. Real-time progress via SSE streaming and htmx polling.
