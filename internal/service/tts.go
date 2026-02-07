@@ -88,14 +88,19 @@ func GenerateAllAudio(
 }
 
 // GetAudioDuration returns the duration of an MP3 file in seconds.
-// Uses ffprobe for accurate measurement, with a file-size fallback.
+// Uses ffmpeg full-decode for accurate measurement, with ffprobe and file-size fallbacks.
 func GetAudioDuration(audioPath string) float64 {
-	duration := ffprobeDuration(audioPath)
-	if duration > 0 {
+	// Primary: ffmpeg full decode (most accurate for VBR/edge-tts MP3s)
+	if duration := ffmpegDuration(audioPath); duration > 0 {
 		return duration + 0.5 // Add 0.5s buffer
 	}
 
-	// Fallback: estimate from file size at 128kbps
+	// Fallback: ffprobe (may underreport for VBR without Xing/VBRI headers)
+	if duration := ffprobeDuration(audioPath); duration > 0 {
+		return duration + 0.5
+	}
+
+	// Last resort: estimate from file size at 128kbps
 	stat, err := os.Stat(audioPath)
 	if err != nil {
 		return 10.0
@@ -105,6 +110,66 @@ func GetAudioDuration(audioPath string) float64 {
 		return 5.0
 	}
 	return estimated
+}
+
+// ffmpegDuration uses ffmpeg to fully decode the audio and report exact duration.
+// This is the most accurate method for VBR MP3s that lack Xing/VBRI headers.
+func ffmpegDuration(audioPath string) float64 {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "ffmpeg",
+		"-i", audioPath,
+		"-f", "null",
+		"-",
+	)
+	// ffmpeg writes progress info to stderr
+	output, _ := cmd.CombinedOutput()
+	return parseFFmpegTime(string(output))
+}
+
+// parseFFmpegTime extracts the last time=HH:MM:SS.ss value from ffmpeg output.
+func parseFFmpegTime(output string) float64 {
+	var lastTime float64
+	for _, line := range strings.Split(output, "\r") {
+		for _, part := range strings.Split(line, "\n") {
+			part = strings.TrimSpace(part)
+			idx := strings.Index(part, "time=")
+			if idx < 0 {
+				continue
+			}
+			timeStr := part[idx+5:]
+			// Extract until next space or end
+			if spIdx := strings.IndexByte(timeStr, ' '); spIdx >= 0 {
+				timeStr = timeStr[:spIdx]
+			}
+			d := parseTimestamp(timeStr)
+			if d > lastTime {
+				lastTime = d
+			}
+		}
+	}
+	return lastTime
+}
+
+// parseTimestamp parses HH:MM:SS.ss into seconds.
+func parseTimestamp(ts string) float64 {
+	parts := strings.Split(ts, ":")
+	if len(parts) != 3 {
+		return 0
+	}
+	hours, err := strconv.ParseFloat(parts[0], 64)
+	if err != nil {
+		return 0
+	}
+	minutes, err := strconv.ParseFloat(parts[1], 64)
+	if err != nil {
+		return 0
+	}
+	seconds, err := strconv.ParseFloat(parts[2], 64)
+	if err != nil {
+		return 0
+	}
+	return hours*3600 + minutes*60 + seconds
 }
 
 // ffprobeDuration uses ffprobe to get the exact duration of an audio file.

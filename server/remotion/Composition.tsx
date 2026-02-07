@@ -59,7 +59,7 @@ export const CodingTutorial: React.FC<TutorialProps> = ({
 
             {/* Audio for this step */}
             {audioFiles[index] && (
-              <Sequence from={startFrame} durationInFrames={duration}>
+              <Sequence from={startFrame} durationInFrames={duration + TRANSITION_FRAMES}>
                 <Audio src={audioFiles[index]} />
               </Sequence>
             )}

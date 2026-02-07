@@ -7,7 +7,7 @@ A web application that generates professional coding tutorial videos from text p
 - **AI-Powered Content Generation** - Enter a prompt and Claude AI generates structured tutorial content with code snippets and explanations
 - **Multi-Language Support** - 10 programming languages: JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP
 - **Text-to-Speech Narration** - Natural-sounding narration using Edge-TTS with configurable speed (0.5-1.5x)
-- **Professional Video Output** - 1920x1080 videos with animated title cards, code typing animations, syntax highlighting, and transitions
+- **Professional Video Output** - 1920x1080 videos with animated title cards, code typing animations, syntax highlighting, and transitions with accurate audio-synced durations
 - **Preview Before Rendering** - Review generated content before committing to video rendering
 - **Real-Time Progress** - Live terminal output via SSE and polling-based progress updates
 - **Single Server** - Go backend serves HTML templates, API, and static files on one port
@@ -63,6 +63,7 @@ make build     # Build binary to bin/server
 make run       # Build + run
 make generate  # Generate templ templates only
 make clean     # Clean build artifacts
+air            # Hot-reload dev server (requires air)
 
 npm run remotion:preview  # Preview Remotion composition
 ```

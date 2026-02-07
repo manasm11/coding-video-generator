@@ -14,6 +14,9 @@ AI-powered coding video tutorial generator. Users enter a text prompt, and the s
 # Generate templ templates + run server
 make dev
 
+# Hot-reload development (requires air: go install github.com/air-verse/air@latest)
+air
+
 # Build binary
 make build
 
@@ -45,7 +48,7 @@ The core workflow is a 3-phase pipeline triggered by `POST /api/generate` (htmx 
 
 1. **Content Generation** — Spawns `claude -p "{prompt}" --output-format json` as a subprocess. Parses the JSON response into a structured tutorial (title, steps with code snippets and explanations).
 2. **Audio Generation** — Uses the `bytectlgo/edge-tts` Go library to generate MP3 narration for each step. Configurable voice speed (0.5-1.5x).
-3. **Video Rendering** — Bundles and renders a Remotion composition (`CodingTutorial`) into an MP4 (1920x1080 @ 30fps, H.264) via Node.js subprocess.
+3. **Video Rendering** — Bundles and renders a Remotion composition (`CodingTutorial`) into an MP4 (1920x1080 @ 30fps, H.264) via Node.js subprocess. Audio durations are measured by Remotion's `calculateMetadata` (using `@remotion/media-utils`) for accurate frame-level sync.
 
 Jobs are tracked in-memory with `sync.RWMutex`. Real-time progress via SSE streaming and htmx polling.
 
@@ -78,6 +81,17 @@ Located in `server/remotion/`. The `CodingTutorial` component renders:
 - 30-frame transitions between steps
 
 Font sizing is dynamic (16-26px range) to prevent code overflow.
+
+**Audio duration measurement:** `Root.tsx` defines a `calculateMetadata` function that uses `@remotion/media-utils` (`getAudioDurationInSeconds`) to measure each audio file's actual duration in the Remotion browser context. This replaces the previous approach of passing pre-calculated durations from Go. The Go backend sends an empty `stepDurations` array; Remotion computes the real values and sets `durationInFrames` dynamically.
+
+### Audio Duration Strategy
+
+`GetAudioDuration()` in `internal/service/tts.go` uses a 3-tier fallback:
+1. **ffmpeg full-decode** (primary) — most accurate for VBR MP3s without Xing/VBRI headers
+2. **ffprobe** (fallback) — may underreport for VBR files
+3. **File-size estimate** (last resort) — assumes 128kbps
+
+All methods add a 0.5s buffer. Go-measured durations are logged for diagnostics only; Remotion measures its own durations for rendering.
 
 ### htmx Interaction Patterns
 

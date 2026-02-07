@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,15 +30,13 @@ func RenderVideo(
 	}
 
 	if tracker != nil {
-		tracker.UpdateProgress(5, "Calculating audio durations...", nil)
+		tracker.UpdateProgress(5, "Preparing audio for rendering...", nil)
 	}
 
-	// Calculate frame durations for each step
-	var stepDurations []int
-	for _, audioFile := range audioFiles {
+	// Log Go-measured durations for diagnostics (actual durations measured by Remotion via calculateMetadata)
+	for i, audioFile := range audioFiles {
 		duration := GetAudioDuration(audioFile)
-		frames := int(math.Ceil(duration * 30)) // 30fps
-		stepDurations = append(stepDurations, frames)
+		log.Printf("[%s] Step %d audio duration (Go-measured): %.2fs", jobID, i, duration)
 	}
 
 	// Build audio HTTP URLs
@@ -49,11 +46,11 @@ func RenderVideo(
 			fmt.Sprintf("http://localhost%s/api/audio/%s/%d", config.ServerPort, jobID, i))
 	}
 
-	// Build input props
+	// Build input props (stepDurations left empty — calculated by Remotion's calculateMetadata)
 	inputProps := map[string]interface{}{
 		"content":       content,
 		"audioFiles":    audioFileURLs,
-		"stepDurations": stepDurations,
+		"stepDurations": []int{},
 	}
 
 	outputPath := filepath.Join(outputDir, jobID+".mp4")
@@ -68,11 +65,6 @@ func RenderVideo(
 	inputPropsJSON, err := json.Marshal(inputProps)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal input props: %w", err)
-	}
-
-	stepDurationsJSON, err := json.Marshal(stepDurations)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal step durations: %w", err)
 	}
 
 	absOutputPath, _ := filepath.Abs(outputPath)
@@ -102,19 +94,13 @@ async function main() {
         serveUrl: bundleLocation,
         id: 'CodingTutorial',
         inputProps,
+        timeoutInMilliseconds: 120000,
     });
-
-    const totalDuration = %s.reduce((a, b) => a + b, 0) + (%d * 30);
-
-    const compositionWithDuration = {
-        ...composition,
-        durationInFrames: totalDuration,
-    };
 
     console.log(JSON.stringify({ type: 'progress', phase: 'rendering', percent: 0 }));
 
     await renderMedia({
-        composition: compositionWithDuration,
+        composition,
         serveUrl: bundleLocation,
         codec: 'h264',
         outputLocation: outputPath,
@@ -135,8 +121,6 @@ main().catch((err) => {
 		jsonQuote(remotionDir),
 		string(inputPropsJSON),
 		jsonQuote(absOutputPath),
-		string(stepDurationsJSON),
-		len(stepDurations),
 	)
 
 	timeout := config.VideoRenderTimeout + config.RemotionBundleTimeout
