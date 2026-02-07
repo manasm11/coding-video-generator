@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	"coding-video-generator/internal/config"
 	"coding-video-generator/internal/progress"
@@ -84,107 +88,44 @@ func GenerateAllAudio(
 }
 
 // GetAudioDuration returns the duration of an MP3 file in seconds.
-// Uses a simple frame-counting approach.
+// Uses ffprobe for accurate measurement, with a file-size fallback.
 func GetAudioDuration(audioPath string) float64 {
-	f, err := os.Open(audioPath)
-	if err != nil {
-		return 10.0
-	}
-	defer f.Close()
-
-	stat, err := f.Stat()
-	if err != nil {
-		return 10.0
-	}
-
-	// Parse MP3 frames to get duration
-	duration := parseMP3Duration(f, stat.Size())
+	duration := ffprobeDuration(audioPath)
 	if duration > 0 {
 		return duration + 0.5 // Add 0.5s buffer
 	}
 
 	// Fallback: estimate from file size at 128kbps
-	estimated := float64(stat.Size()) / (16 * 1024)
+	stat, err := os.Stat(audioPath)
+	if err != nil {
+		return 10.0
+	}
+	estimated := float64(stat.Size())/(16*1024) + 0.5
 	if estimated < 5.0 {
 		return 5.0
 	}
 	return estimated
 }
 
-// parseMP3Duration attempts to calculate MP3 duration by reading frame headers.
-func parseMP3Duration(f *os.File, fileSize int64) float64 {
-	buf := make([]byte, 4)
-	offset := int64(0)
-
-	// Skip ID3v2 tag if present
-	header := make([]byte, 10)
-	if _, err := f.ReadAt(header, 0); err == nil {
-		if string(header[:3]) == "ID3" {
-			tagSize := int64(header[6])<<21 | int64(header[7])<<14 | int64(header[8])<<7 | int64(header[9])
-			offset = tagSize + 10
-		}
+// ffprobeDuration uses ffprobe to get the exact duration of an audio file.
+func ffprobeDuration(audioPath string) float64 {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "ffprobe",
+		"-v", "quiet",
+		"-show_entries", "format=duration",
+		"-of", "csv=p=0",
+		audioPath,
+	)
+	output, err := cmd.Output()
+	if err != nil {
+		return 0
 	}
-
-	// MPEG audio bitrate table for MPEG1 Layer 3
-	bitrateTable := []int{0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0}
-	sampleRateTable := []int{44100, 48000, 32000, 0}
-
-	totalSamples := 0
-	sampleRate := 0
-	framesRead := 0
-
-	for offset < fileSize-4 {
-		if _, err := f.ReadAt(buf, offset); err != nil {
-			break
-		}
-
-		// Check for frame sync (11 bits set)
-		if buf[0] != 0xFF || (buf[1]&0xE0) != 0xE0 {
-			offset++
-			continue
-		}
-
-		// Parse header
-		bitrateIndex := int(buf[2]>>4) & 0x0F
-		sampleRateIndex := int(buf[2]>>2) & 0x03
-		padding := int(buf[2]>>1) & 0x01
-
-		if bitrateIndex == 0 || bitrateIndex == 15 || sampleRateIndex == 3 {
-			offset++
-			continue
-		}
-
-		bitrate := bitrateTable[bitrateIndex] * 1000
-		sampleRate = sampleRateTable[sampleRateIndex]
-
-		if bitrate == 0 || sampleRate == 0 {
-			offset++
-			continue
-		}
-
-		frameSize := (144*bitrate)/sampleRate + padding
-		if frameSize <= 0 {
-			offset++
-			continue
-		}
-
-		totalSamples += 1152 // Samples per MPEG1 Layer 3 frame
-		framesRead++
-		offset += int64(frameSize)
-
-		// After reading enough frames, extrapolate
-		if framesRead >= 100 {
-			avgFrameSize := float64(offset) / float64(framesRead)
-			totalFrames := float64(fileSize) / avgFrameSize
-			return (totalFrames * 1152) / float64(sampleRate)
-		}
+	duration, err := strconv.ParseFloat(strings.TrimSpace(string(output)), 64)
+	if err != nil {
+		return 0
 	}
-
-	if sampleRate > 0 && totalSamples > 0 {
-		return float64(totalSamples) / float64(sampleRate)
-	}
-
-	return 0
+	return duration
 }
 
 // CleanupAudio removes audio files for a job.
