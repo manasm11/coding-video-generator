@@ -95,6 +95,10 @@ async function main() {
         id: 'CodingTutorial',
         inputProps,
         timeoutInMilliseconds: 120000,
+        chromiumOptions: {
+            enableMultiProcessOnLinux: false,
+            args: ['--disable-dev-shm-usage', '--disable-gpu'],
+        },
     });
 
     console.log(JSON.stringify({ type: 'progress', phase: 'rendering', percent: 0 }));
@@ -105,6 +109,11 @@ async function main() {
         codec: 'h264',
         outputLocation: outputPath,
         inputProps,
+        concurrency: 1,
+        chromiumOptions: {
+            enableMultiProcessOnLinux: false,
+            args: ['--disable-dev-shm-usage', '--disable-gpu'],
+        },
         onProgress: ({ progress }) => {
             console.log(JSON.stringify({ type: 'progress', phase: 'rendering', percent: progress * 100 }));
         },
@@ -127,7 +136,7 @@ main().catch((err) => {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "node", "-e", renderScript)
+	cmd := exec.CommandContext(ctx, "node", "--max-old-space-size=1024", "-e", renderScript)
 	cmd.Dir = projectRoot
 
 	stdoutPipe, err := cmd.StdoutPipe()

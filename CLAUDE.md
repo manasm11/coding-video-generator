@@ -46,9 +46,9 @@ npm install
 
 The core workflow is a 3-phase pipeline triggered by `POST /api/generate` (htmx form submission):
 
-1. **Content Generation** — Spawns `claude -p "{prompt}" --output-format json` as a subprocess. Parses the JSON response into a structured tutorial (title, steps with code snippets and explanations).
+1. **Content Generation** — Spawns `claude -p "{prompt}" --output-format json` as a subprocess. Parses the JSON response into a structured tutorial (title, 3-8 steps with code snippets and explanations). Each code snippet is constrained to 25 lines max (`config.MaxLinesPerStep`) for video slide readability; longer concepts are split into multiple steps. Post-parse validation logs warnings for any violations.
 2. **Audio Generation** — Uses the `bytectlgo/edge-tts` Go library to generate MP3 narration for each step. Configurable voice speed (0.5-1.5x).
-3. **Video Rendering** — Bundles and renders a Remotion composition (`CodingTutorial`) into an MP4 (1920x1080 @ 30fps, H.264) via Node.js subprocess. Audio durations are measured by Remotion's `calculateMetadata` (using `@remotion/media-utils`) for accurate frame-level sync.
+3. **Video Rendering** — Bundles and renders a Remotion composition (`CodingTutorial`) into an MP4 (1920x1080 @ 30fps, H.264) via Node.js subprocess (with `--max-old-space-size=1024`). Chromium is configured with `enableMultiProcessOnLinux: false`, `--disable-dev-shm-usage`, and `--disable-gpu` for stability on Linux. Concurrency is set to 1. Audio durations are measured by Remotion's `calculateMetadata` (using `@remotion/media-utils`) for accurate frame-level sync.
 
 Jobs are tracked in-memory with `sync.RWMutex`. Real-time progress via SSE streaming and htmx polling.
 
@@ -56,7 +56,7 @@ Jobs are tracked in-memory with `sync.RWMutex`. Real-time progress via SSE strea
 
 Single Go server (`cmd/server/main.go`) using Go 1.22+ stdlib router. Key packages:
 
-- `internal/config/` — Timeouts, paths, TTS voice settings
+- `internal/config/` — Timeouts, paths, TTS voice settings, content generation limits
 - `internal/models/` — GenerationJob, TutorialContent, enums
 - `internal/job/` — Thread-safe in-memory job store
 - `internal/handler/` — HTTP handlers (pages, API, SSE, file serving)

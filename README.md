@@ -8,6 +8,7 @@ A web application that generates professional coding tutorial videos from text p
 - **Multi-Language Support** - 10 programming languages: JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP
 - **Text-to-Speech Narration** - Natural-sounding narration using Edge-TTS with configurable speed (0.5-1.5x)
 - **Professional Video Output** - 1920x1080 videos with animated title cards, code typing animations, syntax highlighting, and transitions with accurate audio-synced durations
+- **Readable Code Slides** - Code snippets are limited to 25 lines per slide; longer concepts are automatically split into multiple steps
 - **Preview Before Rendering** - Review generated content before committing to video rendering
 - **Real-Time Progress** - Live terminal output via SSE and polling-based progress updates
 - **Single Server** - Go backend serves HTML templates, API, and static files on one port

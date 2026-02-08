@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -44,17 +45,19 @@ Your response MUST be valid JSON matching this exact structure:
 }
 
 Guidelines:
-- Create 3-6 logical steps that build upon each other
+- Create 3-8 logical steps that build upon each other
 - Each code snippet should be complete and runnable when possible
 - Explanations should be conversational and suitable for narration
 - The difficulty level should be: %s
 - Use %s for all code examples
 - Make explanations engaging but concise (good for 10-20 seconds of narration each)
+- IMPORTANT: Each code snippet MUST be %d lines or fewer. This is a hard limit for video slide readability.
+- If a concept requires more than %d lines of code, break it into smaller functions and demonstrate each function in a separate step. For example, instead of one 40-line step, create two steps: one defining a helper function and another using it. Each step's code must be self-contained and independently understandable.
 - Escape any special characters in code properly for JSON
 
 Create a coding tutorial about: %s
 
-Respond with ONLY valid JSON, no markdown code blocks or additional text.`, styleDesc, language, prompt)
+Respond with ONLY valid JSON, no markdown code blocks or additional text.`, styleDesc, language, config.MaxLinesPerStep, config.MaxLinesPerStep, prompt)
 }
 
 // GenerateTutorialContent runs the Claude CLI and parses the output.
@@ -213,6 +216,13 @@ func parseTutorialContent(rawOutput string) (*models.TutorialContent, error) {
 			Explanation: explanation,
 			Language:    lang,
 		})
+	}
+
+	for i, step := range steps {
+		lineCount := len(strings.Split(step.Code, "\n"))
+		if lineCount > config.MaxLinesPerStep {
+			log.Printf("WARNING: Step %d has %d lines of code (limit: %d)", i+1, lineCount, config.MaxLinesPerStep)
+		}
 	}
 
 	return &models.TutorialContent{

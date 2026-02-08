@@ -24,6 +24,9 @@ const (
 // Progress tracking
 const MaxLogs = 50
 
+// Content generation limits
+const MaxLinesPerStep = 25
+
 // TTS settings
 const TTSVoice = "en-US-GuyNeural"
 
