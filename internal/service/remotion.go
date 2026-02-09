@@ -10,11 +10,19 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"coding-video-generator/internal/config"
 	"coding-video-generator/internal/models"
 	"coding-video-generator/internal/progress"
 )
+
+// killStaleChrome finds and kills any leftover chrome-headless-shell processes
+// from previous renders to free memory before starting a new render.
+func killStaleChrome() {
+	out, _ := exec.Command("pkill", "-f", "chrome-headless-shell").CombinedOutput()
+	log.Printf("Cleaned up stale Chrome processes: %s", string(out))
+}
 
 // RenderVideo renders a video using Remotion via Node.js subprocess.
 func RenderVideo(
@@ -24,6 +32,8 @@ func RenderVideo(
 	audioFiles []string,
 	tracker *progress.Tracker,
 ) (string, error) {
+	killStaleChrome()
+
 	outputDir := config.OutputDir
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create output dir: %w", err)
@@ -151,6 +161,14 @@ main().catch((err) => {
 	if err := cmd.Start(); err != nil {
 		return "", fmt.Errorf("failed to start remotion render: %w", err)
 	}
+
+	defer func() {
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
+		time.Sleep(500 * time.Millisecond)
+		killStaleChrome()
+	}()
 
 	var wg sync.WaitGroup
 
